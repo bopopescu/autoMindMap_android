@@ -13,17 +13,22 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.cloud.speech.spi.v1.SpeechClient;
-import com.google.cloud.speech.v1.RecognitionAudio;
-import com.google.cloud.speech.v1.RecognitionConfig;
-import com.google.cloud.speech.v1.RecognizeResponse;
-import com.google.cloud.speech.v1.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v1.SpeechRecognitionResult;
-import com.google.common.io.Files;
-import com.google.protobuf.ByteString;
+import com.google.gson.Gson;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView speechView;
     private String getText;
     private SpeechClient speech;
+    //private com.google.cloud.speech.spi.v1beta1.SpeechClient speech;
     private String saveAudioFileName;
     private File saveAudioFile;
     private boolean checkClick = true;
@@ -39,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
 
     private MediaRecorder mRecorder = null;
+    private static String baseURL = "com.mindBlender.app";
 
 
     // Requesting permission to RECORD_AUDIO
@@ -105,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
         //saveAudioFileName = "./storage/emulated/0/NPUSH";
         saveAudioFileName += "/audiorecordtest.3gp";
 
+
         //api 연동
         recordBtn.setOnClickListener(new View.OnClickListener(){
 
@@ -154,66 +162,76 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean speechToText(boolean checkResult){
 
-        //speech to text
-        try {
-            speech = SpeechClient.create();
-        } catch (IOException e) {
+        String callUrl = baseURL+"getAudiofile";
 
-            Log.i("Error","speech create");
-            e.printStackTrace();
-        }
+        HttpURLConnection conn = null;
+        OutputStream os = null;
+        InputStream is = null;
+        ByteArrayOutputStream baos = null;
+        URL url = null;
+        String result ="Fail";
 
         saveAudioFile = new File(saveAudioFileName);
 
-        // Reads the audio file into memory
-        byte[] data = new byte[0];
+
         try {
-            data = Files.toByteArray(saveAudioFile);
-        } catch (IOException e) {
-            Log.i("Error","File to byte Array");
-            e.printStackTrace();
-        }
-        ByteString audioBytes = ByteString.copyFrom(data);
+            url = new URL(callUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(2500 * 1000);
+            conn.setReadTimeout(200 * 1000);
+            conn.setRequestMethod("POST");
 
-        // Builds the sync recognize request
-        RecognitionConfig config = RecognitionConfig.newBuilder()
-                .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
-                .setSampleRateHertz(16000)
-                .setLanguageCode("ko-KR")
-                .build();
-        RecognitionAudio audio = RecognitionAudio.newBuilder()
-                .setContent(audioBytes)
-                .build();
+            conn.setRequestProperty("Cache-Control", "no-cache");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
 
-        // Performs speech recognition on the audio file
-        RecognizeResponse response = speech.recognize(config, audio);
-        List<SpeechRecognitionResult> results = response.getResultsList();
+            Gson gson = new Gson();
 
-        for (SpeechRecognitionResult result: results) {
-            List<SpeechRecognitionAlternative> alternatives = result.getAlternativesList();
-            for (SpeechRecognitionAlternative alternative: alternatives) {
-                //System.out.printf("Transcription: %s%n", alternative.getTranscript());
-                getText = alternative.getTranscript();
+            JSONObject job = null;
+
+            job = new JSONObject(gson.toJson(saveAudioFile));
+
+
+            os = conn.getOutputStream();
+            os.write(job.toString().getBytes());
+            os.flush();
+
+            int responseCode = conn.getResponseCode();
+
+
+            switch (responseCode) {
+                case 200:
+                case 201:
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        sb.append(line + "\n");
+                    }
+                    br.close();
+
+                    result = sb.toString();
             }
-        }
-        try {
-            speech.close();
-            checkResult = true;
-        } catch (Exception e) {
-            Log.i("Error", "Speech close");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        return checkResult;
-    }
-
-    /*public void onClickLisenter(View v){
-
-        switch (v.getId()){
-            case R.id.recordBtn :
+        if(result.equals("Success")){
+            checkResult = true;
+        }else{
+            checkResult = false;
         }
+        return checkResult;
 
-    }*/
+    }
 
     @Override
     public void onStop() {

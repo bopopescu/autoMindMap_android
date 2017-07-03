@@ -28,7 +28,6 @@ android {
         exclude 'META-INF/io.netty.versions.properties'
         exclude 'META-INF/INDEX.LIST'
     }
-
 }
 
 dependencies {
@@ -39,6 +38,13 @@ dependencies {
     compile group: 'com.google.cloud', name: 'google-cloud-speech', version: '0.17.1-alpha'
     compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.android.support:multidex:1.0.1'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    compile 'com.parse:parse-android:1.10.3'
+    compile ('com.android.support.constraint:constraint-layout:1.0.2')
+
+    // OAuth2 for Google API
+    compile ('com.google.api-client:google-api-client:1.22.0'){
+        exclude group: 'com.google.guava'
+    }
+
     testCompile 'junit:junit:4.12'
 }
