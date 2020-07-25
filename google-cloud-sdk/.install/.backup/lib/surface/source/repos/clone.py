@@ -46,7 +46,7 @@ class CloneGA(base.Command):
     $ gcloud source repos clone default TARGET_DIR
     $ cd TARGET_DIR
     ... create/edit files and create one or more commits ...
-    $ git push origin master
+    $ git push origin main
   """
 
   @staticmethod
@@ -114,7 +114,7 @@ class CloneAlpha(base.Command):
     $ {command} REPOSITORY_NAME DIRECTORY_NAME
     $ cd DIRECTORY_NAME
     ... create/edit files and create one or more commits ...
-    $ git push origin master
+    $ git push origin main
 
   """
 
